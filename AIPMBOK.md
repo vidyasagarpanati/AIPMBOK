@@ -1,4 +1,4 @@
-# AIPMBOK — AI Product Management Body of Knowledge (v1)
+# AIPMBOK — AI Product Management Body of Knowledge (v0.01)
 
 *Saved 2026-07-14. Source of truth for AIPMs*
 
