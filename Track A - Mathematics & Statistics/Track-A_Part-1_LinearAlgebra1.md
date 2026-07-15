@@ -1,10 +1,10 @@
 # Context:
 
-AI has evolved to generate text, write code, create images, spin music and produce videos.  
+AI has evolved to generate text, write code, create images, spin music and produce videos.
 
-But AI neither understands human emotions nor grasps the meaning of the text / code its spewing out. So how does AI do it. 
+But AI neither understands human emotions nor grasps the meaning of the text / code its spewing out. So how does AI do it.
 
-AI as a System understands numbers. And through number manipuulation it does all the above. 
+AI as a System understands numbers. And through number manipuulation it does all the above.
 
 Modern AI turns things (words, sentences, images, users, products) into lists of numbers (vectors), and then does two operations on them over and over
 
@@ -13,11 +13,20 @@ Modern AI turns things (words, sentences, images, users, products) into lists of
 
 Everything below is the vocabulary for those two moves.
 
+## Roadmap — five concepts, one PM lens
+
+1. **The data containers** — Scalars → Vectors → Matrices → Tensors, shapes, transpose, `y = Wx + b`.
+2. **The dot product** — the most important operation in AI: attention, retrieval, recommendations.
+3. **Cosine vs Euclidean** — two ways to say "close," and why text search picks cosine.
+4. **Matrix multiplication** — the engine room: deep networks, GPUs, and your API bill.
+5. **The coordinate system** — basis, vector spaces, orthogonality, linear independence.
+6. **The PM layer** — misconceptions to avoid, why it matters, interview prep with model answers.
+
 # Core Concepts
 
 ## Scalars → Vectors → Matrices → Tensors
 
-Think of these as boxes of increasing dimension. Same numbers, more structure.
+Think of these as boxes of increasing dimension. Same numbers, more structure. Each step up adds an axis: **a vector is a stack of scalars; a matrix is a stack of vectors; a tensor is a stack of matrices.**
 
 **Scalar — one number.** Rank-0.
 Examples: temperature = 23.5, a model's confidence = 0.87, price = ₹499.
@@ -60,7 +69,7 @@ When an engineer says "dimension mismatch," this is literally all they mean: two
 
 **Row vs column vectors, transpose.**
 Transpose (Aᵀ) flips rows↔columns: a (3×4) becomes (4×3). It exists mostly to make shapes line up.
-Read the most famous equation in deep learning: **y = Wx + b** — "take input vector x, transform it with weight matrix W, shift it by bias vector b, get output y." A tiny concrete one:
+Read the most famous equation in deep learning: **y = Wx + b** — "take input vector x, transform it with weight matrix W, shift it by bias vector b, get output y." Get comfortable reading this — it appears everywhere. A tiny concrete one:
 
 ```
 Given:
@@ -104,15 +113,15 @@ Die Hard  · Mr.&Mrs.Smith = [9,1]·[7,6] = 63 + 6  = 69   ← high: both action
 Die Hard  · The Notebook  = [9,1]·[1,9] = 9 + 9   = 18   ← low: different genres
 ```
 
-The numbers *behave like a similarity ranking*. No magic — multiply and add.
+The numbers *behave like a similarity ranking* — higher dot product = more alike, on the dimensions the vectors encode. No magic — multiply and add. That's the whole operation — done trillions of times a day across AI systems.
 
 **A physical analogy:** pushing a shopping cart. Push in the direction it faces → full effect (max dot product). Push sideways → nothing (zero). Push backwards → negative. The dot product measures "how much of your effort counts."
 
 **Where you'll meet it in AI (three places, same operation):**
 
-1. **Attention IS dot products** (Week 4 preview). Inside a transformer, every token asks "who's relevant to me?" by taking dot products between its Query vector and all Key vectors. GPT computing attention over a 2,000-token context = millions of dot products *per layer*.
-2. **Retrieval IS dot products.** A vector DB answering "find documents similar to this query" computes query·document for candidates and ranks. Your RAG pipeline's "relevance" is this number.
-3. **Recommendations ARE dot products.** user_vector · item_vector = predicted affinity. If user = [loves_action=8, loves_romance=2] then user·DieHard = 8·9+2·1 = 74, user·Notebook = 8·1+2·9 = 26. Recommend Die Hard. Netflix-style matrix factorization is this at scale.
+1. **Attention IS dot products** (Week 4 preview). Inside a transformer, every token asks "who's relevant to me?" by taking dot products between its Query vector and all Key vectors. Query · Key = relevance score, and those scores decide which other tokens each token "attends" to — attention is literally an alignment ranking. GPT computing attention over a 2,000-token context = millions of dot products *per layer*.
+2. **Retrieval IS dot products.** A vector DB answering "find documents similar to this query" computes query·document for candidates and ranks. Your RAG pipeline's "relevance" is this number. "Semantic search," "similarity search," and "nearest neighbors" are all rankings of dot products (or their normalized cousin, next section). PM translation: "the bot retrieved the wrong document" usually means "the wrong vectors scored highest."
+3. **Recommendations ARE dot products.** user_vector · item_vector = predicted affinity. If user = [loves_action=8, loves_romance=2] then user·DieHard = 8·9+2·1 = 74, user·Notebook = 8·1+2·9 = 26. Recommend Die Hard — the highest dot product wins. Netflix-style matrix factorization is this at scale: learn a vector per user and per item, recommend by dot product — the pre-LLM workhorse that still runs large parts of the internet.
 
 
 
@@ -124,7 +133,7 @@ The numbers *behave like a similarity ranking*. No magic — multiply and add.
 
 It answers: **"do these arrows point the same way?"** — direction only, magnitude ignored.
 
-**Euclidean (L2) distance** = straight-line distance between the two *points*: `√(Σ(aᵢ−bᵢ)²)`. It answers: **"how far apart are they?"** — and length matters.
+**Euclidean (L2) distance** = straight-line distance between the two *points*: `√(Σ(aᵢ−bᵢ)²)`. Range [0, ∞). It answers: **"how far apart are they?"** — and length matters.
 
 **Worked example (do by hand once — this is the classic):**
 
@@ -134,6 +143,8 @@ a·b = 1·2 + 2·1 + 2·2 = 8
 |a| = √(1+4+4) = 3,  |b| = √(4+1+4) = 3
 cosine = 8 / (3·3) = 8/9 ≈ 0.89  → highly similar
 ```
+
+Three multiplications, two square roots, one division. Every "semantic similarity score" you've ever seen in a demo is a number like this one.
 
 **When the two measures disagree (the example that makes it click):**
 
@@ -148,7 +159,7 @@ cosine(a,c) = 0.0        (orthogonal — unrelated)
 L2(a,c)     = 4.0        (…closer than b! misleading for topic search)
 ```
 
-By Euclidean distance, the unrelated document c looks *closer* to a than the same-topic document b does. This is exactly why **text search uses cosine**: you want "same topic," not "same length." Euclidean shows up where magnitude is meaningful (clustering physical measurements, some image embeddings).
+By Euclidean distance, the unrelated document c looks *closer* to a than the same-topic document b does — length polluted the answer. This is exactly why **text search uses cosine**: you want "same topic," not "same length." Direction encodes topic/meaning; magnitude often just reflects document length or term frequency. Euclidean shows up where magnitude is meaningful (clustering physical measurements, some image embeddings). **Rule of thumb: meaning → cosine; measurements → Euclidean.**
 
 **The fake-debate insurance (Principal-level detail):** if embeddings are **normalized** (rescaled to length 1 — most modern embedding APIs do this by default), then cosine ranking ≡ dot-product ranking ≡ Euclidean ranking. They give the same order. So if you hear a team debating "cosine vs dot product" over normalized vectors — the debate is empty, and you're the person who can say so.
 
@@ -157,31 +168,33 @@ By Euclidean distance, the unrelated document c looks *closer* to a than the sam
 ## Matrix Multiplication (the engine room)
 
 **Mechanics:** every cell of the output = one dot product (row of A · column of B).
-(m×n)·(n×p) → (m×p), costing m·n·p multiply-adds.
+(m×n)·(n×p) → (m×p), costing m·n·p multiply-adds — this product of three numbers is where compute bills come from.
 
 **Worked 2×2 example (once by hand, ever):**
 
 ```
-A = [[1, 2],   B = [[5, 6],    AB = [[1·5+2·7, 1·6+2·8],   = [[19, 22],     
-		[3, 4]]        [7, 8]]          [3·5+4·7, 3·6+4·8]]      [43, 50]]
+A = [[1, 2],   B = [[5, 6],    AB = [[1·5+2·7, 1·6+2·8],   = [[19, 22],
+     [3, 4]]        [7, 8]]          [3·5+4·7, 3·6+4·8]]      [43, 50]]
 ```
+
+Top-left cell 19 = row [1,2] · column [5,7] = 5 + 14. Four cells, four dot products.
 
 **Two mental models (both true):**
 
 1. **Transformation:** a matrix is a machine that reshapes space — rotate, stretch, squash, shear. Multiplying a vector by a matrix moves the point somewhere new. (Watch 3Blue1Brown Ch.3 — this is THE visual.)
 2. **Composition:** multiplying two matrices chains two transformations into one — "rotate, THEN stretch." **This is what a deep network is:** layer after layer of transform → the input vector (an image, a sentence) gets progressively reshaped until, in the final space, the answer is easy to read off. "Deep" = many chained transformations.
 
-**Scale check (why this is the whole game):** GPT-class models have *billions* of weights organized as matrices. Generating ONE token = pushing vectors through hundreds of large matrix multiplications. Your API bill is, to first order, a matrix-multiplication bill.
+**Scale check (why this is the whole game):** GPT-class models have *billions* of weights organized as matrices. Generating ONE token = pushing vectors through hundreds of large matrix multiplications. Your API bill is, to first order, a matrix-multiplication bill. When you negotiate model choice, context length, or latency budgets, you are negotiating how many of these multiplications happen — and on whose hardware.
 
-**Why GPUs (the punchline):** each output cell of a matrix multiply is an *independent* dot product — thousands of them, none waiting on another. GPUs have thousands of small cores designed to do exactly this in parallel (they were built to transform 3-D game geometry — same math). CPUs have a few dozen powerful cores; GPUs win at this workload by 10–100×. **This single fact explains NVIDIA's position in AI** (the full origin story is this week's Track E: AlexNet).
+**Why GPUs (the punchline):** each output cell of a matrix multiply is an *independent* dot product — thousands of them, none waiting on another. GPUs have thousands of small cores designed to do exactly this in parallel (they were built to transform 3-D game geometry — same math). CPUs have a few dozen powerful cores; GPUs win at this workload by 10–100×. **This single fact explains NVIDIA's position in AI** (the full origin story is this week's Track E: AlexNet — trained on two gaming GPUs in 2012).
 
 
 
 **Identity and inverse (intuition only):**
 
 - **Identity matrix I** = the "do nothing" transformation (1s on the diagonal): AI = A. The number 1 of the matrix world.
-- **Inverse A⁻¹** = the "undo" button: A⁻¹A = I. If A doubles every vector, A⁻¹ halves it.
-- Not everything can be undone: a matrix that flattens 3-D space onto a plane *destroyed* the third dimension — no inverse exists. **"Non-invertible = information was lost."** You'll never invert a matrix as a PM, but that metaphor is genuinely useful (lossy compression, dimensionality reduction, irreversible aggregations).
+- **Inverse A⁻¹** = the "undo" button: A⁻¹A = I. If A doubles every vector, A⁻¹ halves it. Only square, non-degenerate matrices have one.
+- Not everything can be undone: a matrix that flattens 3-D space onto a plane *destroyed* the third dimension — no inverse exists. **"Non-invertible = information was lost."** You'll never invert a matrix as a PM, but that metaphor is genuinely useful (lossy compression, dimensionality reduction, irreversible aggregations — and later, quantization and embedding-privacy questions).
 
 
 
@@ -232,6 +245,8 @@ That exchange — cost lever, technique, measured trade-off — is Principal-lev
 - **RAG retrieves nearby embeddings.** "The bot answered from the wrong document" often = "the nearest vectors weren't the right vectors." You can now ask *which* — the query's embedding, the docs', or the distance metric?
 - **Cost conversations are shape conversations.** Tokens × dimensions × layers = compute. The vocabulary of shapes lets you follow — and interrogate — every infra cost discussion in Weeks 4–12.
 
+**The through-line:** you don't need to *do* this math at work. You need to recognize which of the two moves — similarity or transformation — your product's problem lives in, and ask cost- and quality-shaped questions about it.
+
 
 
 ## Interview Prep (Track A) — with model answers
@@ -249,11 +264,22 @@ That exchange — cost lever, technique, measured trade-off — is Principal-lev
 - *What does 'dimension mismatch' mean when an engineer says a pipeline broke?*
   - **Model answer:** "Two arrays whose shapes don't line up for multiplication — e.g., a (3×4) fed into something expecting (5×p). Usually a wiring bug: wrong embedding size, wrong batch shape, or a model swap that changed output dimensions — which is why changing embedding models mid-flight requires re-indexing."
 
+## Recap — the two moves, and your new vocabulary
+
+**Things → vectors.** Then AI measures angles between them (similarity) and transforms them (matrix multiplication), over and over.
+
+- **Containers:** scalar · vector · matrix · tensor · rank · shapes · dimension mismatch · transpose · y = Wx + b
+- **Similarity:** dot product · alignment · cosine similarity · Euclidean (L2) distance · normalization · attention · retrieval · recommendations
+- **Transformation:** matrix multiplication · (m×n)·(n×p)→(m×p) · composition · deep = chained · GPUs · identity · inverse · information loss
+- **Coordinate system:** vector space · basis · linear independence · orthogonality · superposition · Matryoshka / PCA
+
+If you can explain each term with a 2-D drawing, you own this module.
+
 
 
 # Practice (NumPy notebook — spec)
 
-1_linear_algebra.ipynb (Google Colab, free). 
+1_linear_algebra.ipynb (Google Colab, free).
 Expected time: 60–90 min.
 
 1. Create vectors/matrices; inspect .shape; practice transpose and reshaping. (Checkpoint: predict each shape before running the cell.)
@@ -302,4 +328,3 @@ Expected time: 60–90 min.
 
 - X: @3blue1brown (Grant Sanderson), @rasbt (Sebastian Raschka — math-to-ML bridges), @svpino (practical ML threads).
 - Reddit: r/learnmachinelearning (weekly "how much math do I need" threads — read the good answers), r/MachineLearning.
-
